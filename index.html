@@ -282,9 +282,10 @@
         // Initialize the model
         async function initModel() {
             if (!captioner) {
-                showStatus('Loading BLIP model (first time may take a minute)...', 'info');
+                showStatus('Loading Vision model (first time may take a minute)...', 'info');
                 try {
-                    captioner = await pipeline('image-to-text', 'Salesforce/blip-image-captioning-base');
+                    // Using ViT-GPT2 which is supported by Transformers.js
+                    captioner = await pipeline('image-to-text', 'Xenova/vit-gpt2-image-captioning');
                     showStatus('Model loaded successfully!', 'success');
                     setTimeout(() => statusDiv.style.display = 'none', 2000);
                 } catch (error) {
