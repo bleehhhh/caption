@@ -284,7 +284,7 @@
             if (!captioner) {
                 showStatus('Loading BLIP model (first time may take a minute)...', 'info');
                 try {
-                    captioner = await pipeline('image-to-text', 'Xenova/blip-image-captioning-base');
+                    captioner = await pipeline('image-to-text', 'Salesforce/blip-image-captioning-base');
                     showStatus('Model loaded successfully!', 'success');
                     setTimeout(() => statusDiv.style.display = 'none', 2000);
                 } catch (error) {
