@@ -1,1 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Uploader and Captioner</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            background-color: #f0f0f0; /* light grey background */
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        #upload-container {
+            width: 80%;
+            max-width: 800px;
+            background-color: #ffffff;
+            border: 3px dashed orange; /* orange secondary color for outline */
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            transition: background-color 0.3s;
+        }
+        #upload-container.dragover {
+            background-color: #e0e0e0;
+        }
+        #model-name-input {
+            width: calc(100% - 22px);
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            outline-color: orange; /* orange outline on focus */
+        }
+        #preview-box {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            min-height: 150px;
+            justify-content: center;
+            align-items: center;
+        }
+        .preview-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .preview-item img {
+            max-width: 150px;
+            max-height: 150px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            object-fit: cover;
+        }
+        .preview-item p {
+            margin-top: 5px;
+            font-size: 14px;
+            word-break: break-all;
+            max-width: 150px;
+        }
+        #upload-button {
+            background-color: #4CAF50; /* green upload button */
+            color: white;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 20px 2px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        #upload-button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div id="upload-container">
+        <input type="text" id="model-name-input" placeholder="Input model name">
+        <div id="preview-box">
+             <p>Drag & Drop files here</p>
+        </div>
+        <button id="upload-button">Upload</button>
+    </div>
 
+    <script>
+        const uploadContainer = document.getElementById('upload-container');
+        const previewBox = document.getElementById('preview-box');
+        const uploadButton = document.getElementById('upload-button');
+        const modelNameInput = document.getElementById('model-name-input');
+        const filesToUpload = [];
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            uploadContainer.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            uploadContainer.addEventListener(eventName, () => uploadContainer.classList.add('dragover'), false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            uploadContainer.addEventListener(eventName, () => uploadContainer.classList.remove('dragover'), false);
+        });
+
+        uploadContainer.addEventListener('drop', handleDrop, false);
+
+        // Clear the initial message on first drop
+        let firstDrop = true;
+
+        function handleFiles(files) {
+            if (firstDrop) {
+                previewBox.innerHTML = '';
+                firstDrop = false;
+            }
+            [...files].forEach(file => {
+                if (file.type.startsWith('image/')) {
+                    filesToUpload.push(file);
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        let previewItem = document.createElement('div');
+                        previewItem.classList.add('preview-item');
+                        let img = document.createElement('img');
+                        img.src = e.target.result;
+                        let p = document.createElement('p');
+                        p.textContent = file.name;
+                        previewItem.appendChild(img);
+                        previewItem.appendChild(p);
+                        previewBox.appendChild(previewItem);
+                    }
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+
+        function handleDrop(e) {
+            let dt = e.dataTransfer;
+            let files = dt.files;
+            handleFiles(files);
+        }
+
+        uploadButton.addEventListener('click', () => {
+            if (filesToUpload.length === 0) {
+                alert('Please drop some images to upload.');
+                return;
+            }
+
+            let modelName = modelNameInput.value;
+            if (!modelName) {
+                alert('Please enter a model name.');
+                return;
+            }
+
+            let formData = new FormData();
+            formData.append('model_name', modelName);
+            filesToUpload.forEach(file => {
+                formData.append('files[]', file);
+            });
+
+            uploadButton.textContent = 'Uploading...';
+            uploadButton.disabled = true;
+
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log(data);
+                alert('Upload and processing complete! Check your project folder for the output.');
+                // Optionally clear the previews and file list
+                previewBox.innerHTML = '<p>Drag & Drop files here</p>';
+                filesToUpload.length = 0; // Clear the array
+                firstDrop = true;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred during upload. Check the console and app_errors.log for details.');
+            })
+            .finally(() => {
+                uploadButton.textContent = 'Upload';
+                uploadButton.disabled = false;
+            });
+        });
+    </script>
+</body>
+</html>
